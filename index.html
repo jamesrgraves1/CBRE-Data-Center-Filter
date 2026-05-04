@@ -1,328 +1,556 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>CBRE | Data Center Land Screener</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-:root{--g:#003F2D;--g2:#005C41;--g3:#007A55;--ac:#1AE5A0;--pass:#00C875;--warn:#F5A623;--flag:#E8402A;--unk:#9CA8A2;--bg:#F2F1ED;--wh:#FFFFFF;--bd:#E0DED7;--bd2:#C8C5BC;--ink:#111A16;--ink2:#3B4E45;--ink3:#6B8077;--sans:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;--serif:'Playfair Display',serif;}
+:root{--g:#003F2D;--g2:#005C41;--g3:#00A36C;--ac:#00FF9C;--pass:#00C875;--warn:#FFB020;--flag:#FF4D3D;--unk:#8A9E97;--bg:#0D1A14;--bg2:#152018;--bg3:#1C2D22;--card:#1A2820;--bdr:rgba(255,255,255,.08);--bdr2:rgba(255,255,255,.15);--ink:#E8F0EC;--ink2:#A8C4B8;--ink3:#6B9080;--sans:'Syne',sans-serif;--mono:'DM Mono',monospace;--serif:'DM Serif Display',serif;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;}
+
 /* NAV */
-.nav{background:var(--g);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:52px;position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.08);}
-.nav-l{display:flex;align-items:center;gap:14px;}
-.nlogo{background:white;color:var(--g);font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:.1em;padding:5px 9px;border-radius:3px;}
-.nsep{width:1px;height:16px;background:rgba(255,255,255,.2);}
-.nname{color:rgba(255,255,255,.85);font-size:13px;font-weight:500;}
-.ntag{font-family:var(--mono);font-size:9px;color:var(--ac);letter-spacing:.12em;text-transform:uppercase;}
-.nver{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.28);letter-spacing:.06em;}
-/* HERO */
-.hero{background:var(--g);padding:3rem 2rem 3.5rem;position:relative;overflow:hidden;}
-.hr1{position:absolute;right:-100px;top:-100px;width:480px;height:480px;border-radius:50%;border:1px solid rgba(255,255,255,.05);pointer-events:none;}
-.hr2{position:absolute;right:80px;bottom:-160px;width:300px;height:300px;border-radius:50%;border:1px solid rgba(26,229,160,.06);pointer-events:none;}
-.hero-in{max-width:880px;margin:0 auto;position:relative;}
-.hey{font-family:var(--mono);font-size:9px;color:var(--ac);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.9rem;}
-.hh1{font-family:var(--serif);font-size:clamp(1.9rem,3.5vw,2.8rem);color:white;line-height:1.15;font-weight:400;margin-bottom:.75rem;}
+.nav{background:rgba(13,26,20,.97);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:56px;position:sticky;top:0;z-index:1000;border-bottom:1px solid var(--bdr);}
+.nav-l{display:flex;align-items:center;gap:16px;}
+.nlogo{background:var(--ac);color:var(--g);font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.12em;padding:5px 10px;border-radius:3px;}
+.nsep{width:1px;height:18px;background:var(--bdr2);}
+.nname{color:var(--ink);font-size:13px;font-weight:600;letter-spacing:.04em;}
+.nav-tabs{display:flex;gap:4px;}
+.nav-tab{font-family:var(--sans);font-size:12px;font-weight:500;padding:6px 16px;border-radius:6px;border:none;background:transparent;color:var(--ink3);cursor:pointer;transition:all .15s;letter-spacing:.04em;}
+.nav-tab:hover{color:var(--ink);background:var(--card);}
+.nav-tab.active{background:var(--card);color:var(--ac);border:1px solid var(--bdr);}
+.ntag{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;}
+
+/* PAGES */
+.page{display:none;}
+.page.active{display:block;}
+#page-dash{display:none;}
+#page-dash.active{display:flex;flex-direction:column;height:calc(100vh - 56px);}
+
+/* ═══════════════════════════════
+   SCREENER PAGE
+═══════════════════════════════ */
+.hero{padding:3.5rem 2rem 3rem;max-width:1000px;margin:0 auto;}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;}
+.hey{font-family:var(--mono);font-size:9px;color:var(--ac);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.hey::before{content:'';width:24px;height:1px;background:var(--ac);}
+.hh1{font-family:var(--serif);font-size:clamp(2rem,3.5vw,3rem);color:var(--ink);line-height:1.1;font-weight:400;margin-bottom:1rem;}
 .hh1 em{font-style:italic;color:var(--ac);}
-.hsub{font-size:14px;color:rgba(255,255,255,.5);line-height:1.65;max-width:500px;margin-bottom:2.25rem;font-weight:300;}
-/* FORM */
-.fcard{background:var(--wh);border-radius:12px;padding:1.75rem;max-width:800px;box-shadow:0 8px 40px rgba(0,0,0,.18);}
-.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
-.fg3{display:grid;grid-template-columns:1fr 1fr 120px;gap:12px;margin-bottom:12px;}
-.fg2b{display:grid;grid-template-columns:1fr 180px;gap:12px;margin-bottom:16px;}
+.hsub{font-size:13px;color:var(--ink3);line-height:1.7;margin-bottom:2rem;}
+.fcard{background:var(--card);border:1px solid var(--bdr);border-radius:12px;padding:1.75rem;box-shadow:0 0 60px rgba(0,255,156,.03);}
+.fc-title{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.16em;text-transform:uppercase;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px;}
+.fc-title::after{content:'';flex:1;height:1px;background:var(--bdr);}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.fg3{display:grid;grid-template-columns:1fr 1fr 110px;gap:10px;margin-bottom:10px;}
+.fg2b{display:grid;grid-template-columns:1fr 160px;gap:10px;margin-bottom:14px;}
 .fg{display:flex;flex-direction:column;gap:5px;}
-.fl{font-family:var(--mono);font-size:9px;font-weight:500;color:var(--ink2);letter-spacing:.1em;text-transform:uppercase;}
-.fi{font-family:var(--sans);font-size:14px;color:var(--ink);padding:10px 12px;background:var(--bg);border:1px solid var(--bd);border-radius:7px;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;}
-.fi:focus{border-color:var(--g3);box-shadow:0 0 0 3px rgba(0,122,85,.1);}
+.fl{font-family:var(--mono);font-size:9px;font-weight:500;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;}
+.fi{font-family:var(--sans);font-size:13px;color:var(--ink);padding:9px 12px;background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;outline:none;transition:border-color .15s,box-shadow .15s;width:100%;}
+.fi:focus{border-color:var(--ac);box-shadow:0 0 0 2px rgba(0,255,156,.1);}
 .fi::placeholder{color:var(--ink3);}
 select.fi{cursor:pointer;}
-.fdiv{height:1px;background:var(--bd);margin:4px 0 16px;position:relative;}
-.fdiv-lbl{position:absolute;top:-8px;left:0;font-family:var(--mono);font-size:8px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;background:var(--wh);padding:0 10px;}
+.fdiv{height:1px;background:var(--bdr);margin:2px 0 14px;position:relative;}
+.fdiv-lbl{position:absolute;top:-8px;left:0;font-family:var(--mono);font-size:8px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;background:var(--card);padding:0 8px;}
 .fbot{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
-.fhint{font-size:11px;color:var(--ink3);line-height:1.5;}
-.fhint b{color:var(--g3);font-weight:500;}
-.btn-go{background:var(--g);color:white;border:none;padding:11px 28px;border-radius:7px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;flex-shrink:0;}
-.btn-go:hover{background:var(--g2);}
-.btn-go:disabled{background:var(--unk);cursor:not-allowed;}
-.errbox{background:rgba(232,64,42,.08);color:#C0271A;border:1px solid rgba(232,64,42,.2);border-radius:7px;padding:10px 14px;font-size:13px;margin-top:12px;display:none;}
-/* PILLS */
-.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:1.75rem;}
-.pill{font-family:var(--mono);font-size:8px;font-weight:500;padding:3px 9px;border-radius:20px;letter-spacing:.07em;text-transform:uppercase;}
-.pl{background:rgba(0,200,117,.14);color:#00D880;border:1px solid rgba(0,200,117,.2);}
-.pa{background:rgba(26,229,160,.09);color:var(--ac);border:1px solid rgba(26,229,160,.18);}
+.fhint{font-size:10px;color:var(--ink3);line-height:1.5;}
+.fhint b{color:var(--g3);}
+.btn-go{background:var(--ac);color:var(--g);border:none;padding:11px 24px;border-radius:6px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;letter-spacing:.04em;}
+.btn-go:hover{background:#00FFB0;box-shadow:0 0 20px rgba(0,255,156,.3);}
+.btn-go:disabled{background:var(--bdr2);color:var(--ink3);cursor:not-allowed;box-shadow:none;}
+.errbox{background:rgba(255,77,61,.08);color:#FF8070;border:1px solid rgba(255,77,61,.2);border-radius:6px;padding:9px 12px;font-size:12px;margin-top:10px;display:none;}
+.hero-right{display:flex;flex-direction:column;gap:12px;padding-top:.5rem;}
+.info-card{background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:1.25rem;}
+.info-card-title{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:.6rem;}
+.grade-row{display:flex;gap:6px;}
+.grade-chip{flex:1;text-align:center;padding:8px 4px;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:500;}
+.gc-a{background:rgba(0,200,117,.15);color:#00C875;border:1px solid rgba(0,200,117,.2);}
+.gc-b{background:rgba(0,168,96,.1);color:#00A860;border:1px solid rgba(0,168,96,.15);}
+.gc-c{background:rgba(255,176,32,.1);color:#FFB020;border:1px solid rgba(255,176,32,.15);}
+.gc-d{background:rgba(255,140,90,.1);color:#FF8C5A;border:1px solid rgba(255,140,90,.15);}
+.gc-f{background:rgba(255,77,61,.12);color:#FF4D3D;border:1px solid rgba(255,77,61,.18);}
+.check-list{display:flex;flex-direction:column;gap:5px;}
+.check-list-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink2);}
+.check-list-pts{font-family:var(--mono);font-size:9px;color:var(--ink3);}
+
 /* LOADING */
-#lv{max-width:880px;margin:0 auto;padding:2.5rem 2rem;}
-.lh h2{font-family:var(--serif);font-size:1.5rem;font-weight:400;margin-bottom:3px;}
-.lh p{font-size:13px;color:var(--ink3);}
-.lchip{display:inline-block;margin:10px 0 1.25rem;font-family:var(--mono);font-size:10px;font-weight:500;color:var(--g2);background:rgba(0,63,45,.07);padding:4px 12px;border-radius:20px;}
+#lv{max-width:800px;margin:0 auto;padding:3rem 2rem;}
+.lh h2{font-family:var(--serif);font-size:1.8rem;font-weight:400;color:var(--ink);margin-bottom:4px;}
+.lh p{font-size:13px;color:var(--ink3);margin-bottom:.75rem;}
+.lchip{display:inline-block;margin-bottom:1.5rem;font-family:var(--mono);font-size:10px;color:var(--ac);background:rgba(0,255,156,.08);border:1px solid rgba(0,255,156,.15);padding:4px 12px;border-radius:20px;}
 .lsteps{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:1.25rem;}
-.ls{background:var(--wh);border:1px solid var(--bd);border-radius:7px;padding:10px 13px;display:flex;align-items:center;gap:10px;transition:border-color .3s;}
-.ls.active{border-color:var(--g3);}
+.ls{background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:10px 13px;display:flex;align-items:center;gap:10px;transition:border-color .3s;}
+.ls.active{border-color:var(--ac);box-shadow:0 0 10px rgba(0,255,156,.07);}
 .ls.done{border-color:rgba(0,200,117,.3);background:rgba(0,200,117,.025);}
-.lsi{width:25px;height:25px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.lsi.spin{border:2px solid var(--bd2);border-top-color:var(--g);animation:rot .7s linear infinite;background:transparent;}
-.lsi.done-ic{background:rgba(0,200,117,.14);}
+.lsi{width:24px;height:24px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.lsi.spin{border:2px solid var(--bdr2);border-top-color:var(--ac);animation:rot .7s linear infinite;background:transparent;}
+.lsi.done-ic{background:rgba(0,200,117,.15);}
 @keyframes rot{to{transform:rotate(360deg);}}
 .ls-lbl{font-size:11px;font-weight:500;color:var(--ink);line-height:1.3;}
 .ls-src{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:1px;}
-.ls-b{font-family:var(--mono);font-size:8px;font-weight:500;padding:2px 6px;border-radius:3px;letter-spacing:.06em;flex-shrink:0;background:rgba(0,63,45,.07);color:var(--g3);}
-.pbar{height:2px;background:var(--bd);border-radius:1px;overflow:hidden;}
-.pfill{height:100%;background:var(--g3);width:0%;transition:width .3s;}
+.pbar{height:2px;background:var(--bdr);border-radius:1px;overflow:hidden;}
+.pfill{height:100%;background:var(--ac);width:0%;transition:width .3s;box-shadow:0 0 8px rgba(0,255,156,.4);}
 .plbl{font-family:var(--mono);font-size:10px;color:var(--ink3);margin-top:7px;}
+
 /* RESULTS */
-#rv{max-width:880px;margin:0 auto;padding:2rem 2rem 4rem;}
-.rtop{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.4rem;flex-wrap:wrap;}
-.rey{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px;}
-.raddr{font-family:var(--serif);font-size:1.3rem;font-weight:400;color:var(--ink);line-height:1.25;}
+#rv{max-width:1000px;margin:0 auto;padding:2rem 2rem 4rem;}
+.rtop{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.rey{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px;}
+.raddr{font-family:var(--serif);font-size:1.4rem;font-weight:400;color:var(--ink);line-height:1.2;}
 .rmeta{font-family:var(--mono);font-size:10px;color:var(--ink3);margin-top:4px;}
-.ract{display:flex;gap:7px;flex-shrink:0;}
-.btn-sm{background:var(--wh);color:var(--ink);border:1px solid var(--bd2);padding:8px 14px;border-radius:7px;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:background .12s;}
-.btn-sm:hover{background:var(--bg);}
-/* SCORE PANEL */
-.spanel{background:var(--g);border-radius:12px;padding:1.75rem 2rem;margin-bottom:1.4rem;display:grid;grid-template-columns:155px 1px 1fr 1px 195px;gap:0 1.75rem;align-items:center;position:relative;overflow:hidden;}
-.sp-ring{position:absolute;right:-70px;top:-70px;width:240px;height:240px;border-radius:50%;border:1px solid rgba(255,255,255,.06);pointer-events:none;}
-.spdiv{width:1px;background:rgba(255,255,255,.1);align-self:stretch;}
-.sp-sc{text-align:center;}
-.spnum{font-family:var(--serif);font-size:5.2rem;line-height:1;color:white;display:inline-flex;align-items:flex-start;}
-.spden{font-size:1.3rem;color:rgba(255,255,255,.32);margin-top:.55rem;font-family:var(--sans);font-weight:300;}
-.splbl{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.38);letter-spacing:.12em;text-transform:uppercase;margin-top:5px;}
-.vchip{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:20px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.07em;margin-bottom:9px;}
-.vc-pass{background:rgba(0,200,117,.2);color:#00E890;}
-.vc-rev{background:rgba(245,166,35,.2);color:#FFD055;}
-.vc-fail{background:rgba(232,64,42,.2);color:#FF7060;}
+.ract{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+.btn-sm{background:transparent;color:var(--ink2);border:1px solid var(--bdr2);padding:8px 14px;border-radius:6px;font-family:var(--sans);font-size:11px;font-weight:500;cursor:pointer;transition:all .12s;letter-spacing:.04em;}
+.btn-sm:hover{background:var(--card);color:var(--ink);}
+.btn-accent{background:var(--ac);color:var(--g);border:none;padding:8px 14px;border-radius:6px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;transition:all .12s;letter-spacing:.04em;}
+.btn-accent:hover{background:#00FFB0;}
+.spanel{background:var(--card);border:1px solid var(--bdr);border-radius:12px;padding:2rem;margin-bottom:1.25rem;display:grid;grid-template-columns:auto 1px 1fr 1px auto;gap:0 2rem;align-items:center;position:relative;overflow:hidden;}
+.spanel::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(0,255,156,.05) 0%,transparent 70%);pointer-events:none;}
+.spdiv{width:1px;background:var(--bdr);align-self:stretch;}
+.sp-sc{text-align:center;min-width:130px;}
+.grade-badge{font-family:var(--serif);font-size:5rem;line-height:1;display:block;margin-bottom:4px;}
+.score-sub-text{font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:.08em;}
+.score-num-small{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--ink2);margin-top:4px;}
+.vchip{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:20px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.07em;margin-bottom:10px;}
+.vc-pass{background:rgba(0,200,117,.15);color:#00E890;border:1px solid rgba(0,200,117,.2);}
+.vc-rev{background:rgba(255,176,32,.12);color:#FFD055;border:1px solid rgba(255,176,32,.2);}
+.vc-fail{background:rgba(255,77,61,.12);color:#FF7060;border:1px solid rgba(255,77,61,.2);}
 .vdot{width:6px;height:6px;border-radius:50%;}
-.spsum{font-size:12px;color:rgba(255,255,255,.62);line-height:1.65;}
-.spstats{display:flex;flex-direction:column;gap:10px;}
+.sp-sum-label{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.4rem;}
+.sp-sum{font-size:12px;color:var(--ink2);line-height:1.7;}
+.spstats{display:flex;flex-direction:column;gap:10px;min-width:150px;}
 .sr{display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
-.slbl{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;}
-.sv{font-family:var(--mono);font-size:12px;font-weight:500;color:white;}
-.sv-p{color:var(--pass);}.sv-f{color:#FF7060;}.sv-a{color:var(--ac);}.sv-s{font-size:9px;}
-/* SECTIONS */
+.slbl{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;}
+.sv{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink);}
+.sv-p{color:var(--pass);}.sv-f{color:var(--flag);}.sv-a{color:var(--ac);}
+.exec-summary{background:var(--bg2);border:1px solid var(--bdr);border-left:3px solid var(--ac);border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;}
+.exec-label{font-family:var(--mono);font-size:9px;color:var(--ac);letter-spacing:.16em;text-transform:uppercase;margin-bottom:.6rem;}
+.exec-text{font-size:13px;color:var(--ink2);line-height:1.75;}
+.score-bars{background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;}
+.sb-title{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.14em;text-transform:uppercase;margin-bottom:1rem;}
+.sb-row{display:grid;grid-template-columns:130px 1fr 50px;gap:12px;align-items:center;margin-bottom:8px;}
+.sb-label{font-size:11px;color:var(--ink2);font-weight:500;}
+.sb-track{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;}
+.sb-fill{height:100%;border-radius:3px;transition:width .6s;}
+.sb-val{font-family:var(--mono);font-size:10px;color:var(--ink3);text-align:right;}
 .sec{margin-bottom:1.1rem;}
-.sechd{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:9px;font-weight:500;color:var(--ink3);letter-spacing:.14em;text-transform:uppercase;border-bottom:1px solid var(--bd);padding-bottom:6px;margin-bottom:6px;}
+.sechd{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:9px;font-weight:500;color:var(--ink3);letter-spacing:.14em;text-transform:uppercase;border-bottom:1px solid var(--bdr);padding-bottom:6px;margin-bottom:7px;}
 .spts{font-size:10px;color:var(--ink3);}
-/* CHECK CARDS */
-.chk{background:var(--wh);border:1px solid var(--bd);border-radius:7px;padding:12px 14px;margin-bottom:5px;display:grid;grid-template-columns:9px 1fr auto;gap:0 12px;align-items:start;transition:border-color .15s,box-shadow .12s;}
-.chk:hover{border-color:var(--bd2);box-shadow:0 2px 8px rgba(0,0,0,.04);}
-.ci{width:9px;height:9px;border-radius:50%;margin-top:3px;flex-shrink:0;}
-.ci-pass{background:var(--pass);box-shadow:0 0 0 3px rgba(0,200,117,.14);}
-.ci-caut{background:var(--warn);box-shadow:0 0 0 3px rgba(245,166,35,.14);}
-.ci-flag{background:var(--flag);box-shadow:0 0 0 3px rgba(232,64,42,.14);}
-.ci-unk{background:var(--unk);box-shadow:0 0 0 3px rgba(156,168,162,.12);}
-.cbody{min-width:0;}
-.cname{font-size:12px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
-.cbadge{font-family:var(--mono);font-size:8px;font-weight:500;padding:1px 5px;border-radius:3px;background:rgba(0,63,45,.07);color:var(--g2);}
-.cfind{font-size:12px;color:var(--ink3);line-height:1.5;}
-.clink{font-family:var(--mono);font-size:9px;color:var(--g2);text-decoration:none;display:inline-flex;align-items:center;gap:2px;margin-top:4px;opacity:.65;transition:opacity .15s;}
+.chk{background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:1rem 1.25rem;margin-bottom:6px;transition:border-color .15s;}
+.chk:hover{border-color:var(--bdr2);}
+.chk-top{display:grid;grid-template-columns:10px 1fr auto;gap:0 12px;align-items:start;margin-bottom:.4rem;}
+.ci{width:10px;height:10px;border-radius:50%;margin-top:3px;flex-shrink:0;}
+.ci-pass{background:var(--pass);box-shadow:0 0 0 3px rgba(0,200,117,.12);}
+.ci-caut{background:var(--warn);box-shadow:0 0 0 3px rgba(255,176,32,.12);}
+.ci-flag{background:var(--flag);box-shadow:0 0 0 3px rgba(255,77,61,.12);}
+.ci-unk{background:var(--unk);box-shadow:0 0 0 3px rgba(138,158,151,.1);}
+.cname{font-size:12px;font-weight:600;color:var(--ink);}
+.cpts-wrap{text-align:right;}
+.cpts{font-family:var(--mono);font-size:11px;font-weight:500;}
+.pts-p{color:var(--pass);}.pts-w{color:var(--warn);}.pts-f{color:var(--flag);}.pts-u{color:var(--unk);}
+.clink{font-family:var(--mono);font-size:9px;color:var(--g3);text-decoration:none;display:block;opacity:.65;transition:opacity .15s;margin-top:2px;}
 .clink:hover{opacity:1;}
-.cpts{font-family:var(--mono);font-size:10px;font-weight:500;white-space:nowrap;text-align:right;margin-top:1px;flex-shrink:0;}
-.pts-p{color:var(--pass);}.pts-w{color:var(--warn);}.pts-f{color:var(--flag);}.pts-u{color:var(--unk);}.pts-i{color:var(--ink3);}
-/* CTA */
-.cta{background:var(--wh);border:1px solid var(--bd);border-radius:12px;padding:1.5rem 1.75rem;display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;margin-top:1.5rem;}
-.cta-h{font-family:var(--serif);font-size:1.1rem;font-weight:400;margin-bottom:3px;}
+.cfind{font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:.35rem;}
+.cdetail{font-size:11px;color:var(--ink3);line-height:1.65;padding:8px 12px;background:var(--bg2);border-radius:5px;border-left:2px solid var(--bdr2);margin-top:.35rem;}
+.toggle-detail{font-family:var(--mono);font-size:9px;color:var(--ink3);background:none;border:none;cursor:pointer;padding:2px 0;letter-spacing:.06em;transition:color .15s;}
+.toggle-detail:hover{color:var(--ac);}
+.cta-panel{background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:1.5rem;display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;margin-top:1.5rem;}
+.cta-h{font-family:var(--serif);font-size:1.1rem;font-weight:400;color:var(--ink);margin-bottom:3px;}
 .cta-p{font-size:12px;color:var(--ink3);}
 .ctaf{display:flex;flex-direction:column;gap:7px;min-width:200px;}
-.cta-in{font-family:var(--sans);font-size:13px;padding:9px 11px;border:1px solid var(--bd2);border-radius:7px;color:var(--ink);background:var(--bg);outline:none;transition:border-color .15s;}
-.cta-in:focus{border-color:var(--g3);}
-.btn-cta{background:var(--g);color:white;border:none;padding:10px 18px;border-radius:7px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
-.btn-cta:hover{background:var(--g2);}
-.notice{font-size:10px;color:var(--ink3);line-height:1.65;margin-top:1.1rem;padding-top:.9rem;border-top:1px solid var(--bd);}
-/* DONE */
-#dv{max-width:880px;margin:0 auto;padding:5rem 2rem;text-align:center;}
-.done-ic{width:52px;height:52px;border-radius:50%;background:rgba(0,200,117,.12);margin:0 auto 1.1rem;display:flex;align-items:center;justify-content:center;}
+.cta-in{font-family:var(--sans);font-size:13px;padding:9px 11px;border:1px solid var(--bdr2);border-radius:6px;color:var(--ink);background:var(--bg2);outline:none;transition:border-color .15s;}
+.cta-in:focus{border-color:var(--ac);}
+.btn-cta{background:var(--ac);color:var(--g);border:none;padding:10px 18px;border-radius:6px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;}
+.btn-cta:hover{background:#00FFB0;}
+.notice{font-size:10px;color:var(--ink3);line-height:1.65;margin-top:1rem;padding-top:.9rem;border-top:1px solid var(--bdr);}
+#dv{max-width:700px;margin:0 auto;padding:5rem 2rem;text-align:center;}
+.done-ic{width:56px;height:56px;border-radius:50%;background:rgba(0,255,156,.1);border:1px solid rgba(0,255,156,.2);margin:0 auto 1.1rem;display:flex;align-items:center;justify-content:center;}
 .done-h{font-family:var(--serif);font-size:1.8rem;font-weight:400;margin-bottom:.4rem;}
 .done-p{font-size:14px;color:var(--ink3);}
+
+/* ═══════════════════════════════
+   DASHBOARD PAGE
+═══════════════════════════════ */
+.dash-layout{display:grid;grid-template-columns:320px 1fr;flex:1;overflow:hidden;}
+.sidebar{background:var(--bg2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;}
+.sb-head{padding:1.25rem 1.25rem .75rem;border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.sb-title{font-family:var(--serif);font-size:1.1rem;font-weight:400;color:var(--ink);margin-bottom:.75rem;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:.75rem;}
+.stat-mini{background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:.45rem;text-align:center;}
+.stat-mini-val{font-family:var(--mono);font-size:15px;font-weight:500;}
+.stat-mini-lbl{font-family:var(--mono);font-size:7px;color:var(--ink3);letter-spacing:.07em;margin-top:2px;}
+.sm-a{color:#00C875;}.sm-b{color:#FFB020;}.sm-f{color:#FF4D3D;}.sm-t{color:var(--ac);}
+.filters{display:flex;gap:5px;flex-wrap:wrap;}
+.filter-btn{font-family:var(--mono);font-size:8px;font-weight:500;padding:3px 9px;border-radius:20px;border:1px solid var(--bdr2);background:transparent;color:var(--ink3);cursor:pointer;transition:all .15s;letter-spacing:.06em;}
+.filter-btn:hover,.filter-btn.on{background:var(--ac);color:var(--g);border-color:var(--ac);}
+.sb-search{padding:.6rem 1.25rem;border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.search-in{width:100%;font-family:var(--sans);font-size:12px;padding:7px 10px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;color:var(--ink);outline:none;transition:border-color .15s;}
+.search-in:focus{border-color:var(--ac);}
+.search-in::placeholder{color:var(--ink3);}
+.sb-list{flex:1;overflow-y:auto;padding:.5rem;}
+.sb-list::-webkit-scrollbar{width:3px;}.sb-list::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px;}
+.prop-card{background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:.8rem 1rem;margin-bottom:5px;cursor:pointer;transition:all .15s;}
+.prop-card:hover{border-color:var(--bdr2);}
+.prop-card.selected{border-color:var(--ac);box-shadow:0 0 10px rgba(0,255,156,.07);}
+.pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;margin-bottom:.3rem;}
+.pc-addr{font-size:11px;font-weight:600;color:var(--ink);line-height:1.3;}
+.pc-grade{font-family:var(--serif);font-size:1.3rem;line-height:1;font-weight:400;}
+.pc-meta{font-family:var(--mono);font-size:8px;color:var(--ink3);margin-bottom:.3rem;}
+.pc-bar{height:2px;background:var(--bdr);border-radius:1px;overflow:hidden;}
+.pc-fill{height:100%;border-radius:1px;}
+.empty-state{text-align:center;padding:2.5rem 1rem;color:var(--ink3);}
+.empty-state h3{font-family:var(--serif);font-size:1rem;font-weight:400;margin-bottom:.4rem;color:var(--ink2);}
+.empty-state p{font-size:11px;line-height:1.6;}
+.btn-to-screener{display:inline-block;margin-top:.75rem;background:var(--ac);color:var(--g);padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;}
+
+.map-panel{display:flex;flex-direction:column;position:relative;}
+.map-toolbar{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;background:var(--bg2);border-bottom:1px solid var(--bdr);gap:.75rem;flex-wrap:wrap;flex-shrink:0;}
+.mt-title{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;}
+.mt-l,.mt-r{display:flex;align-items:center;gap:8px;}
+.map-toggle-btn{font-family:var(--mono);font-size:8px;font-weight:500;padding:4px 9px;border-radius:4px;border:1px solid var(--bdr2);background:transparent;color:var(--ink3);cursor:pointer;transition:all .15s;letter-spacing:.06em;}
+.map-toggle-btn:hover,.map-toggle-btn.on{background:var(--g2);color:var(--ac);border-color:var(--g2);}
+.export-btn{font-family:var(--mono);font-size:8px;font-weight:500;padding:4px 10px;border-radius:4px;border:1px solid var(--bdr2);background:var(--card);color:var(--ink2);cursor:pointer;transition:all .15s;letter-spacing:.06em;}
+.export-btn:hover{border-color:var(--ac);color:var(--ac);}
+#dash-map{flex:1;min-height:300px;background:#0D1A14;}
+.map-legend{position:absolute;bottom:12px;left:12px;background:rgba(13,26,20,.92);border:1px solid var(--bdr);border-radius:7px;padding:.65rem .9rem;z-index:400;backdrop-filter:blur(8px);}
+.ml-title{font-family:var(--mono);font-size:7px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.4rem;}
+.ml-row{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--ink2);margin-bottom:2px;}
+.ml-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+/* DETAIL DRAWER */
+.detail-drawer{position:absolute;right:0;bottom:0;top:44px;width:320px;background:var(--bg2);border-left:1px solid var(--bdr);overflow-y:auto;z-index:500;transform:translateX(100%);transition:transform .3s;}
+.detail-drawer.open{transform:translateX(0);}
+.detail-drawer::-webkit-scrollbar{width:3px;}.detail-drawer::-webkit-scrollbar-thumb{background:var(--bdr2);}
+.dp-head{padding:1rem 1.25rem;border-bottom:1px solid var(--bdr);position:sticky;top:0;background:var(--bg2);z-index:10;display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;}
+.dp-addr{font-size:12px;font-weight:600;color:var(--ink);line-height:1.3;}
+.dp-info{font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:3px;}
+.dp-grade-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.dp-grade{font-family:var(--serif);font-size:2rem;line-height:1;}
+.dp-close{background:none;border:none;color:var(--ink3);cursor:pointer;font-size:14px;padding:2px;}
+.dp-body{padding:1rem 1.25rem;}
+.dp-score-row{display:flex;align-items:center;gap:10px;margin-bottom:.75rem;}
+.dp-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-family:var(--mono);font-size:8px;font-weight:500;letter-spacing:.07em;}
+.dp-chip.pass{background:rgba(0,200,117,.15);color:#00E890;}
+.dp-chip.rev{background:rgba(255,176,32,.12);color:#FFD055;}
+.dp-chip.fail{background:rgba(255,77,61,.12);color:#FF7060;}
+.dp-score-num{font-family:var(--mono);font-size:11px;color:var(--ink3);}
+.dp-exec{font-size:11px;color:var(--ink2);line-height:1.65;margin-bottom:.75rem;padding-bottom:.75rem;border-bottom:1px solid var(--bdr);}
+.dp-checks-title{font-family:var(--mono);font-size:8px;color:var(--ink3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem;}
+.dp-chk{display:grid;grid-template-columns:8px 1fr auto;gap:7px;align-items:center;font-size:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);}
+.dp-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.dp-chk-name{color:var(--ink2);}
+.dp-chk-pts{font-family:var(--mono);font-size:9px;color:var(--ink3);}
+.dp-actions{padding:.75rem 1.25rem;border-top:1px solid var(--bdr);display:flex;gap:7px;position:sticky;bottom:0;background:var(--bg2);}
+.dp-btn{flex:1;text-align:center;padding:8px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;border:none;}
+.dp-btn-del{background:rgba(255,77,61,.1);color:#FF7060;border:1px solid rgba(255,77,61,.2);}
+.dp-btn-del:hover{background:rgba(255,77,61,.2);}
+
 .hidden{display:none!important;}
-@media(max-width:640px){
-  .hero{padding:2rem 1.25rem 2.5rem;}
-  .fg2,.fg3,.fg2b{grid-template-columns:1fr;}
-  .spanel{grid-template-columns:1fr;gap:1.1rem;}
+@media(max-width:768px){
+  .hero-grid,.dash-layout{grid-template-columns:1fr;}
+  .hero-right{display:none;}
+  .spanel{grid-template-columns:1fr;gap:1.25rem;}
   .spdiv{display:none;}
-  .lsteps{grid-template-columns:1fr;}
-  .cta{grid-template-columns:1fr;}
-  #rv,#lv,#dv{padding-left:1.25rem;padding-right:1.25rem;}
+  .lsteps,.stats-row{grid-template-columns:1fr 1fr;}
+  .cta-panel{grid-template-columns:1fr;}
+  #rv,#lv,#dv,.hero{padding-left:1.25rem;padding-right:1.25rem;}
+  .sidebar{height:300px;}
 }
 </style>
 </head>
 <body>
 
+<!-- NAV -->
 <nav class="nav">
   <div class="nav-l">
     <div class="nlogo">CBRE</div>
     <div class="nsep"></div>
     <span class="nname">Data Center Land Screener</span>
   </div>
-  <span class="ntag">Internal Advisory Tool</span>
-  <span class="nver">v4.1 · 12 Checks</span>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('screener',this)">Screener</button>
+    <button class="nav-tab" onclick="showPage('dashboard',this)">Dashboard</button>
+  </div>
+  <span class="ntag">Internal Tool · v2.0</span>
 </nav>
 
-<!-- FORM -->
-<div class="hero" id="fv">
-  <div class="hr1"></div><div class="hr2"></div>
-  <div class="hero-in">
-    <div class="hey">CBRE Data Center Advisory Group</div>
-    <h1 class="hh1">Screen any land parcel for<br><em>data center viability</em></h1>
-    <p class="hsub">Enter a property address. Our AI cross-references FEMA flood maps, EPA records, USGS elevation, USFWS wetlands, FCC fiber, power grid, FAA airspace, zoning, and more — full scored report in seconds.</p>
+<!-- ═══════════ SCREENER PAGE ═══════════ -->
+<div id="page-screener" class="page active">
 
-    <div class="fcard">
-      <div class="fg2">
-        <div class="fg"><label class="fl">Street Address *</label><input class="fi" id="fs" type="text" placeholder="4500 Industrial Blvd" autocomplete="off"></div>
-        <div class="fg"><label class="fl">City *</label><input class="fi" id="fc" type="text" placeholder="Hutto" autocomplete="off"></div>
-      </div>
-      <div class="fg3">
-        <div class="fg"><label class="fl">State *</label>
-          <select class="fi" id="fst">
-            <option value="">— Select State —</option>
-            <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option>
-            <option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option>
-            <option>Florida</option><option>Georgia</option><option>Idaho</option><option>Illinois</option>
-            <option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option>
-            <option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option>
-            <option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option>
-            <option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option>
-            <option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option>
-            <option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option>
-            <option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option>
-            <option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option>
-            <option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option>
-            <option>Wisconsin</option><option>Wyoming</option>
-          </select>
+  <!-- FORM -->
+  <div class="hero" id="fv">
+    <div class="hero-grid">
+      <div>
+        <div class="hey">CBRE Data Center Advisory</div>
+        <h1 class="hh1">Screen any land for<br><em>data center viability</em></h1>
+        <p class="hsub">Enter a property address. Our AI cross-references 12 qualification criteria — power grid, FEMA flood zones, EPA records, wetlands, fiber, FAA airspace, zoning, and more — returning a graded report with full analysis.</p>
+        <div class="fcard">
+          <div class="fc-title">Property Details</div>
+          <div class="fg2">
+            <div class="fg"><label class="fl">Street Address *</label><input class="fi" id="fs" type="text" placeholder="4500 Industrial Blvd" autocomplete="off"></div>
+            <div class="fg"><label class="fl">City *</label><input class="fi" id="fc" type="text" placeholder="Hutto" autocomplete="off"></div>
+          </div>
+          <div class="fg3">
+            <div class="fg"><label class="fl">State *</label>
+              <select class="fi" id="fst">
+                <option value="">— State —</option>
+                <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option>
+                <option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option>
+                <option>Florida</option><option>Georgia</option><option>Idaho</option><option>Illinois</option>
+                <option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option>
+                <option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option>
+                <option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option>
+                <option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option>
+                <option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option>
+                <option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option>
+                <option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option>
+                <option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option>
+                <option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option>
+                <option>Wisconsin</option><option>Wyoming</option>
+              </select>
+            </div>
+            <div class="fg"><label class="fl">County</label><input class="fi" id="fco" type="text" placeholder="Williamson County"></div>
+            <div class="fg"><label class="fl">ZIP</label><input class="fi" id="fz" type="text" placeholder="78634" maxlength="10"></div>
+          </div>
+          <div class="fdiv"><span class="fdiv-lbl">Optional</span></div>
+          <div class="fg2b">
+            <div class="fg"><label class="fl">Parcel / APN</label><input class="fi" id="fa" type="text" placeholder="Assessor parcel number"></div>
+            <div class="fg"><label class="fl">Acreage</label><input class="fi" id="fac" type="text" placeholder="e.g. 200"></div>
+          </div>
+          <div class="fg" style="margin-bottom:14px"><label class="fl">Submitted By</label><input class="fi" id="fsub" type="text" placeholder="Your name"></div>
+          <div class="fbot">
+            <div class="fhint"><b>12-point AI analysis</b> · Power · FEMA · EPA · Wetlands · Fiber · FAA · Zoning · Graded A–F</div>
+            <button class="btn-go" id="gbtn" onclick="go()">Analyze Property →</button>
+          </div>
+          <div class="errbox" id="ferr"></div>
         </div>
-        <div class="fg"><label class="fl">County</label><input class="fi" id="fco" type="text" placeholder="e.g. Williamson County"></div>
-        <div class="fg"><label class="fl">ZIP Code</label><input class="fi" id="fz" type="text" placeholder="78634" maxlength="10"></div>
       </div>
-      <div class="fdiv"><span class="fdiv-lbl">Optional Details</span></div>
-      <div class="fg2b">
-        <div class="fg"><label class="fl">Parcel / APN</label><input class="fi" id="fa" type="text" placeholder="Assessor parcel number (if known)"></div>
-        <div class="fg"><label class="fl">Approximate Acreage</label><input class="fi" id="fac" type="text" placeholder="e.g. 200"></div>
+      <div class="hero-right">
+        <div class="info-card">
+          <div class="info-card-title">Grading Scale</div>
+          <div class="grade-row">
+            <div class="grade-chip gc-a">A<br><small>85+</small></div>
+            <div class="grade-chip gc-b">B<br><small>70–84</small></div>
+            <div class="grade-chip gc-c">C<br><small>55–69</small></div>
+            <div class="grade-chip gc-d">D<br><small>40–54</small></div>
+            <div class="grade-chip gc-f">F<br><small>0–39</small></div>
+          </div>
+          <div style="font-size:10px;color:var(--ink3);margin-top:.6rem">Fixed rubric — consistent scores every analysis</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">What We Check</div>
+          <div class="check-list">
+            <div class="check-list-row"><span>⚡ Power grid & transmission</span><span class="check-list-pts">20 pts</span></div>
+            <div class="check-list-row"><span>🏗 Substation proximity</span><span class="check-list-pts">15 pts</span></div>
+            <div class="check-list-row"><span>🌊 FEMA flood zone</span><span class="check-list-pts">12 pts</span></div>
+            <div class="check-list-row"><span>📐 Site acreage</span><span class="check-list-pts">15 pts</span></div>
+            <div class="check-list-row"><span>🌿 USFWS wetlands</span><span class="check-list-pts">8 pts</span></div>
+            <div class="check-list-row"><span>📡 Fiber & broadband</span><span class="check-list-pts">10 pts</span></div>
+            <div class="check-list-row"><span>🏭 Zoning & land use</span><span class="check-list-pts">10 pts</span></div>
+            <div class="check-list-row"><span>+ 5 more checks</span><span class="check-list-pts">20 pts</span></div>
+          </div>
+        </div>
       </div>
-      <div class="fbot">
-        <div class="fhint"><b>AI-powered</b> · FEMA · USGS · EPA · USFWS · FCC<br>ERCOT/FERC · FAA · DOT · Zoning · 12 total checks</div>
-        <button class="btn-go" id="gbtn" onclick="go()">Analyze Property →</button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="lv" class="hidden">
+    <div class="lh"><h2>Analyzing property</h2><p>Running 12-point AI qualification analysis</p></div>
+    <div class="lchip" id="laddr"></div>
+    <div class="lsteps" id="lsteps"></div>
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    <div class="plbl" id="plbl">Initializing...</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="rv" class="hidden">
+    <div class="rtop">
+      <div>
+        <div class="rey">Qualification Report</div>
+        <div class="raddr" id="r-addr">—</div>
+        <div class="rmeta" id="r-meta">—</div>
       </div>
-      <div class="errbox" id="ferr"></div>
+      <div class="ract">
+        <button class="btn-accent" onclick="showPage('dashboard',document.querySelectorAll('.nav-tab')[1])">📊 Dashboard</button>
+        <button class="btn-sm" onclick="window.print()">Print</button>
+        <button class="btn-sm" onclick="resetForm()">New Search</button>
+      </div>
+    </div>
+    <div class="spanel">
+      <div class="sp-sc">
+        <span class="grade-badge" id="r-grade">—</span>
+        <div class="score-sub-text">Grade</div>
+        <div class="score-num-small" id="r-score-sm">—</div>
+      </div>
+      <div class="spdiv"></div>
+      <div>
+        <div class="vchip" id="r-chip"><div class="vdot" id="r-dot"></div><span id="r-verd">—</span></div>
+        <div class="sp-sum-label">Verdict</div>
+        <div class="sp-sum" id="r-sum">—</div>
+      </div>
+      <div class="spdiv"></div>
+      <div class="spstats" id="r-stats"></div>
+    </div>
+    <div class="exec-summary"><div class="exec-label">Executive Summary</div><div class="exec-text" id="r-exec">—</div></div>
+    <div class="score-bars" id="r-bars"></div>
+    <div id="findings"></div>
+    <div class="cta-panel">
+      <div><div class="cta-h">Send to a CBRE specialist</div><div class="cta-p">A data center advisor will review and follow up within 2 business days.</div></div>
+      <div class="ctaf">
+        <input type="text" class="cta-in" id="fu-n" placeholder="Landowner name">
+        <input type="text" class="cta-in" id="fu-e" placeholder="Email address">
+        <button class="btn-cta" onclick="submitFU()">Send to advisor →</button>
+      </div>
+    </div>
+    <div class="notice">Analysis powered by Claude AI (Anthropic) using real geographic knowledge of US infrastructure, FEMA, USGS, EPA, USFWS, FCC, FAA, DOT, and local zoning. Results are preliminary — verify with professional field assessment before any transaction.</div>
+  </div>
+
+  <!-- DONE -->
+  <div id="dv" class="hidden">
+    <div class="done-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="#00FF9C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="done-h">Sent to advisory team</div>
+    <p class="done-p">A CBRE data center specialist will review and follow up within 2 business days.</p>
+    <button class="btn-sm" style="margin-top:1.5rem" onclick="resetForm()">Analyze another property</button>
+  </div>
+
+</div><!-- end screener page -->
+
+<!-- ═══════════ DASHBOARD PAGE ═══════════ -->
+<div id="page-dash" class="page">
+  <div class="dash-layout">
+    <div class="sidebar">
+      <div class="sb-head">
+        <div class="sb-title">Property Tracker</div>
+        <div class="stats-row">
+          <div class="stat-mini"><div class="stat-mini-val sm-t" id="st-total">0</div><div class="stat-mini-lbl">TOTAL</div></div>
+          <div class="stat-mini"><div class="stat-mini-val sm-a" id="st-a">0</div><div class="stat-mini-lbl">GRADE A</div></div>
+          <div class="stat-mini"><div class="stat-mini-val sm-b" id="st-b">0</div><div class="stat-mini-lbl">GRADE B</div></div>
+          <div class="stat-mini"><div class="stat-mini-val sm-f" id="st-flags">0</div><div class="stat-mini-lbl">FLAGS</div></div>
+        </div>
+        <div class="filters">
+          <button class="filter-btn on" data-grade="ALL" onclick="setFilter('ALL',this)">All</button>
+          <button class="filter-btn" data-grade="A" onclick="setFilter('A',this)">A</button>
+          <button class="filter-btn" data-grade="B" onclick="setFilter('B',this)">B</button>
+          <button class="filter-btn" data-grade="C" onclick="setFilter('C',this)">C</button>
+          <button class="filter-btn" data-grade="D" onclick="setFilter('D',this)">D/F</button>
+        </div>
+      </div>
+      <div class="sb-search"><input type="text" class="search-in" id="search-in" placeholder="Search address, city, state..." oninput="renderList()"></div>
+      <div class="sb-list" id="sb-list"></div>
     </div>
 
-    <div class="pills">
-      <span class="pill pl">FEMA Flood Maps</span>
-      <span class="pill pl">USGS Elevation</span>
-      <span class="pill pl">EPA Environmental</span>
-      <span class="pill pl">USFWS Wetlands</span>
-      <span class="pill pl">FCC Fiber Coverage</span>
-      <span class="pill pa">ERCOT / FERC Power Grid</span>
-      <span class="pill pa">FAA Airspace</span>
-      <span class="pill pa">DOT Rail &amp; Freight</span>
-      <span class="pill pa">Zoning Context</span>
+    <div class="map-panel">
+      <div class="map-toolbar">
+        <div class="mt-l">
+          <div class="mt-title">Property Map</div>
+          <button class="map-toggle-btn on" id="btn-markers" onclick="toggleHeat(false,this)">Pins</button>
+          <button class="map-toggle-btn" id="btn-heat" onclick="toggleHeat(true,this)">Heat Zones</button>
+        </div>
+        <div class="mt-r">
+          <button class="export-btn" onclick="exportCSV()">↓ Export CSV</button>
+          <button class="export-btn" onclick="clearAll()">Clear All</button>
+        </div>
+      </div>
+      <div id="dash-map"></div>
+      <div class="map-legend">
+        <div class="ml-title">Grade</div>
+        <div class="ml-row"><div class="ml-dot" style="background:#00C875"></div>A — Qualified</div>
+        <div class="ml-row"><div class="ml-dot" style="background:#00A860"></div>B — Strong</div>
+        <div class="ml-row"><div class="ml-dot" style="background:#FFB020"></div>C — Review</div>
+        <div class="ml-row"><div class="ml-dot" style="background:#FF8C5A"></div>D — Marginal</div>
+        <div class="ml-row"><div class="ml-dot" style="background:#FF4D3D"></div>F — Disqualified</div>
+      </div>
+      <!-- DETAIL DRAWER -->
+      <div class="detail-drawer" id="detail-drawer">
+        <div class="dp-head">
+          <div><div class="dp-addr" id="dp-addr">—</div><div class="dp-info" id="dp-info">—</div></div>
+          <div class="dp-grade-wrap">
+            <div class="dp-grade" id="dp-grade">—</div>
+            <button class="dp-close" onclick="closeDetail()">✕</button>
+          </div>
+        </div>
+        <div class="dp-body">
+          <div class="dp-score-row">
+            <div class="dp-chip" id="dp-chip">—</div>
+            <div class="dp-score-num" id="dp-score">—</div>
+          </div>
+          <div class="dp-exec" id="dp-exec">—</div>
+          <div class="dp-checks-title">Check Results</div>
+          <div id="dp-checks"></div>
+        </div>
+        <div class="dp-actions">
+          <button class="dp-btn" style="background:rgba(0,255,156,.1);color:var(--ac);border:1px solid rgba(0,255,156,.15)" onclick="showPage('screener',document.querySelectorAll('.nav-tab')[0])">+ New Analysis</button>
+          <button class="dp-btn dp-btn-del" id="dp-del">Delete</button>
+        </div>
+      </div>
     </div>
   </div>
-</div>
-
-<!-- LOADING -->
-<div id="lv" class="hidden">
-  <div class="lh">
-    <h2>Analyzing property</h2>
-    <p>Running AI analysis across 12 qualification criteria — about 20 seconds</p>
-  </div>
-  <div class="lchip" id="laddr"></div>
-  <div class="lsteps" id="lsteps"></div>
-  <div class="pbar"><div class="pfill" id="pfill"></div></div>
-  <div class="plbl" id="plbl">Initializing...</div>
-</div>
-
-<!-- RESULTS -->
-<div id="rv" class="hidden">
-  <div class="rtop">
-    <div>
-      <div class="rey">Qualification Report</div>
-      <div class="raddr" id="r-addr">—</div>
-      <div class="rmeta" id="r-meta">—</div>
-    </div>
-    <div class="ract">
-      <button class="btn-sm" onclick="window.print()">↓ Print</button>
-      <button class="btn-sm" onclick="reset()">New Search</button>
-    </div>
-  </div>
-  <div class="spanel">
-    <div class="sp-ring"></div>
-    <div class="sp-sc">
-      <div class="spnum" id="r-score">—<span class="spden">/100</span></div>
-      <div class="splbl">Suitability Score</div>
-    </div>
-    <div class="spdiv"></div>
-    <div>
-      <div class="vchip" id="r-chip"><div class="vdot" id="r-dot"></div><span id="r-verd">—</span></div>
-      <div class="spsum" id="r-sum">—</div>
-    </div>
-    <div class="spdiv"></div>
-    <div class="spstats" id="r-stats"></div>
-  </div>
-  <div id="findings"></div>
-  <div class="cta">
-    <div>
-      <div class="cta-h">Send to a CBRE specialist</div>
-      <div class="cta-p">A data center advisor will review this report and follow up within 2 business days.</div>
-    </div>
-    <div class="ctaf">
-      <input type="text" class="cta-in" id="fu-n" placeholder="Landowner name">
-      <input type="text" class="cta-in" id="fu-e" placeholder="Email address">
-      <button class="btn-cta" onclick="submitFU()">Send to advisor →</button>
-    </div>
-  </div>
-  <div class="notice">Analysis powered by Claude AI (Anthropic) using real geographic knowledge of US power infrastructure, FEMA flood zones, USGS topography, EPA environmental records, USFWS wetlands, FCC broadband, FAA airspace, DOT rail, and local zoning patterns. Results are preliminary — verify with professional field assessment before any transaction or site commitment.</div>
-</div>
-
-<!-- DONE -->
-<div id="dv" class="hidden">
-  <div class="done-ic">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M4 12l5 5L20 6" stroke="#00C875" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </div>
-  <div class="done-h">Sent to advisory team</div>
-  <p class="done-p">A CBRE data center specialist will review your property report and follow up within 2 business days.</p>
-  <button class="btn-sm" style="margin-top:1.5rem" onclick="reset()">Analyze another property</button>
 </div>
 
 <script>
+// ══════════════════════════════
+// PAGE NAVIGATION
+// ══════════════════════════════
+let dashMapInit = false;
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display='none'; });
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  const page = document.getElementById('page-' + name);
+  page.style.display = name === 'dashboard' ? 'flex' : 'block';
+  page.classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'dashboard') {
+    setTimeout(() => {
+      if (!dashMapInit) { initMap(); dashMapInit = true; }
+      else { dashMap.invalidateSize(); renderMap(); }
+      updateStats(); renderList();
+    }, 50);
+  }
+}
+// Init screener page display
+document.getElementById('page-screener').style.display = 'block';
+document.getElementById('page-dash').style.display = 'none';
+
+// ══════════════════════════════
+// SCREENER LOGIC
+// ══════════════════════════════
 const STEPS=[
-  {l:'Geocoding & locating parcel',         s:'AI geographic analysis'},
-  {l:'FEMA flood zone classification',       s:'FEMA NFHL knowledge base'},
-  {l:'USGS elevation & terrain analysis',    s:'USGS 3DEP knowledge base'},
-  {l:'EPA environmental records scan',       s:'EPA ECHO knowledge base'},
-  {l:'USFWS wetlands inventory check',       s:'NWI knowledge base'},
-  {l:'FCC fiber & broadband coverage',       s:'FCC broadband data'},
-  {l:'Power grid — ERCOT / FERC analysis',   s:'Grid infrastructure data'},
-  {l:'Substation & utility proximity',       s:'Utility infrastructure data'},
-  {l:'FAA airspace & height restrictions',   s:'FAA sectional data'},
-  {l:'DOT rail & freight corridors',         s:'BTS infrastructure data'},
-  {l:'Zoning & land use classification',     s:'County GIS knowledge base'},
-  {l:'Compiling qualification report',       s:'CBRE AI scoring engine'},
+  {l:'Geocoding & locating parcel',s:'Geographic analysis'},
+  {l:'FEMA flood zone classification',s:'FEMA NFHL'},
+  {l:'USGS elevation & terrain',s:'USGS 3DEP'},
+  {l:'EPA environmental records',s:'EPA ECHO'},
+  {l:'USFWS wetlands inventory',s:'NWI database'},
+  {l:'FCC fiber & broadband',s:'FCC broadband'},
+  {l:'Power grid — ERCOT / FERC',s:'Grid infrastructure'},
+  {l:'Substation & utility proximity',s:'Utility data'},
+  {l:'FAA airspace & heights',s:'FAA sectional'},
+  {l:'DOT rail & freight corridors',s:'BTS/DOT data'},
+  {l:'Zoning & land use',s:'County GIS'},
+  {l:'Compiling graded report',s:'CBRE AI engine'},
 ];
 
 function buildSteps(){
   const c=document.getElementById('lsteps');c.innerHTML='';
-  STEPS.forEach((s,i)=>{
-    c.innerHTML+=`<div class="ls" id="ls${i}"><div class="lsi" id="lsi${i}"><svg width="11" height="11" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="3.5" stroke="#C8C5BC" stroke-width="1.3" fill="none"/></svg></div><div style="flex:1;min-width:0"><div class="ls-lbl">${s.l}</div><div class="ls-src">${s.s}</div></div><span class="ls-b">AI</span></div>`;
-  });
+  STEPS.forEach((s,i)=>{c.innerHTML+=`<div class="ls" id="ls${i}"><div class="lsi" id="lsi${i}"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="3.5" stroke="rgba(255,255,255,.2)" stroke-width="1.2" fill="none"/></svg></div><div style="flex:1;min-width:0"><div class="ls-lbl">${s.l}</div><div class="ls-src">${s.s}</div></div></div>`;});
 }
-
 function setStep(i,state){
   const el=document.getElementById(`ls${i}`),ic=document.getElementById(`lsi${i}`);
   if(!el||!ic)return;
   if(state==='active'){el.className='ls active';ic.className='lsi spin';ic.innerHTML='';}
-  else if(state==='done'){el.className='ls done';ic.className='lsi done-ic';ic.innerHTML=`<svg width="11" height="11" viewBox="0 0 11 11"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#00C875" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;}
+  else if(state==='done'){el.className='ls done';ic.className='lsi done-ic';ic.innerHTML=`<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 5l2.5 2.5 3.5-3.5" stroke="#00C875" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;}
   document.getElementById('pfill').style.width=Math.round(((i+1)/STEPS.length)*100)+'%';
   document.getElementById('plbl').textContent=state==='done'?'✓ '+STEPS[i]?.s:'Analyzing: '+STEPS[i]?.l+'...';
 }
-
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-
 async function animSteps(ms){
   const per=ms/STEPS.length;
   for(let i=0;i<STEPS.length-1;i++){setStep(i,'active');await sleep(per*.4);setStep(i,'done');await sleep(per*.6);}
   setStep(STEPS.length-1,'active');
+}
+
+function saveResult(d){
+  try{const all=JSON.parse(localStorage.getItem('cbre_analyses')||'[]');all.unshift(d);if(all.length>200)all.splice(200);localStorage.setItem('cbre_analyses',JSON.stringify(all));}catch(e){}
 }
 
 async function go(){
@@ -333,47 +561,45 @@ async function go(){
   const county=document.getElementById('fco').value.trim();
   const acres=document.getElementById('fac').value.trim();
   const apn=document.getElementById('fa').value.trim();
+  const submittedBy=document.getElementById('fsub').value.trim();
   const err=document.getElementById('ferr');
   err.style.display='none';
-  if(!street||!city||!state){err.textContent='Please fill in Street Address, City, and State — these are required.';err.style.display='block';return;}
+  if(!street||!city||!state){err.textContent='Please fill in Street Address, City, and State.';err.style.display='block';return;}
   document.getElementById('gbtn').disabled=true;
   document.getElementById('fv').classList.add('hidden');
   document.getElementById('lv').classList.remove('hidden');
   document.getElementById('laddr').textContent=[street,city,state,zip].filter(Boolean).join(', ');
   buildSteps();
   try{
-    animSteps(18000);
-    const res=await fetch('/api/analyze',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({street,city,state,county,zip,acres,apn})
-    });
-    if(!res.ok){
-      const e=await res.json().catch(()=>({error:'Server error'}));
-      throw new Error(e.error||`Server returned ${res.status}`);
-    }
+    animSteps(20000);
+    const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({street,city,state,county,zip,acres,apn,submittedBy})});
+    if(!res.ok){const e=await res.json().catch(()=>({error:'Server error'}));throw new Error(e.error||`Error ${res.status}`);}
     const d=await res.json();
     for(let i=0;i<STEPS.length;i++)setStep(i,'done');
     await sleep(300);
-    render(d,street,city,state,zip,county);
+    saveResult(d);
+    renderResult(d);
   }catch(e){
     document.getElementById('lv').classList.add('hidden');
     document.getElementById('fv').classList.remove('hidden');
     document.getElementById('gbtn').disabled=false;
-    err.textContent='Analysis failed: '+(e.message||'Unknown error — please try again.');
-    err.style.display='block';
+    err.textContent='Analysis failed: '+(e.message||'Unknown error');err.style.display='block';
   }
 }
 
-function render(d,street,city,state,zip,county){
+function gradeColor(g){return g==='A'?'#00C875':g==='B'?'#00A860':g==='C'?'#FFB020':g==='D'?'#FF8C5A':'#FF4D3D';}
+
+function renderResult(d){
   document.getElementById('lv').classList.add('hidden');
   document.getElementById('rv').classList.remove('hidden');
-  const addr=d.geocoded_address||[street,city,state,zip].filter(Boolean).join(', ');
-  const rc=d.county||county;
-  document.getElementById('r-addr').textContent=addr;
-  document.getElementById('r-meta').textContent=[rc?(rc.toLowerCase().includes('county')?rc:rc+' County'):null,d.state_abbr||state,d.coordinates?d.coordinates:null].filter(Boolean).join(' · ')+' · Analyzed '+new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  document.getElementById('r-score').innerHTML=d.score+'<span class="spden">/100</span>';
-  document.getElementById('r-sum').textContent=d.summary;
+  const ai=d.address_input||{};
+  document.getElementById('r-addr').textContent=d.geocoded_address||[ai.street,ai.city,ai.state].filter(Boolean).join(', ');
+  document.getElementById('r-meta').textContent=[d.county,d.state||ai.state,d.coordinates?`📍 ${d.coordinates.lat?.toFixed(4)}, ${d.coordinates.lng?.toFixed(4)}`:null,'Analyzed '+new Date(d.analyzedAt||Date.now()).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})].filter(Boolean).join(' · ');
+  const grade=d.grade||'F',gc=gradeColor(grade);
+  document.getElementById('r-grade').textContent=grade;
+  document.getElementById('r-grade').style.color=gc;
+  document.getElementById('r-score-sm').textContent=d.score+' / 100';
+  document.getElementById('r-exec').textContent=d.executive_summary||d.summary||'—';
   const chip=document.getElementById('r-chip'),dot=document.getElementById('r-dot'),vt=document.getElementById('r-verd');
   if(d.score>=70){chip.className='vchip vc-pass';dot.style.background='#00E890';vt.textContent='LIKELY QUALIFIED';}
   else if(d.score>=40){chip.className='vchip vc-rev';dot.style.background='#FFD055';vt.textContent='NEEDS FURTHER REVIEW';}
@@ -381,40 +607,161 @@ function render(d,street,city,state,zip,county){
   const chks=d.checks||[];
   const pass=chks.filter(c=>c.status==='pass').length,flag=chks.filter(c=>c.status==='flag').length;
   document.getElementById('r-stats').innerHTML=`
-    <div class="sr"><span class="slbl">CHECKS PASSED</span><span class="sv sv-p">${pass} / ${chks.length}</span></div>
-    <div class="sr"><span class="slbl">CRITICAL FLAGS</span><span class="sv sv-f">${flag}</span></div>
-    <div class="sr"><span class="slbl">SCORE</span><span class="sv sv-a">${d.score} / 100</span></div>
-    <div class="sr"><span class="slbl">LOCATION</span><span class="sv sv-s">${city}, ${state}</span></div>`;
+    <div class="sr"><span class="slbl">GRADE</span><span class="sv" style="color:${gc};font-size:15px">${grade}</span></div>
+    <div class="sr"><span class="slbl">SCORE</span><span class="sv sv-a">${d.score}/100</span></div>
+    <div class="sr"><span class="slbl">PASSED</span><span class="sv sv-p">${pass}/${chks.length}</span></div>
+    <div class="sr"><span class="slbl">FLAGS</span><span class="sv sv-f">${flag}</span></div>
+    <div class="sr"><span class="slbl">BY</span><span class="sv" style="font-size:10px">${d.submittedBy||'CBRE'}</span></div>`;
   const cats=['Power Infrastructure','Connectivity','Environmental & Hazards','Site & Zoning'];
-  const bycat={};cats.forEach(c=>{bycat[c]=[];});
-  chks.forEach(c=>{if(bycat[c.category])bycat[c.category].push(c);else bycat['Site & Zoning'].push(c);});
+  const catCol={'Power Infrastructure':'#FFB020','Connectivity':'#00C875','Environmental & Hazards':'#FF8C5A','Site & Zoning':'#60A8FF'};
+  let bars='<div class="sb-title">Score Breakdown by Category</div>';
+  cats.forEach(cat=>{
+    const items=chks.filter(c=>c.category===cat);
+    const pts=items.reduce((s,i)=>s+(i.pts||0),0),max=items.reduce((s,i)=>s+(i.max||0),0);
+    if(!max)return;
+    bars+=`<div class="sb-row"><div class="sb-label">${cat.split(' ')[0]}</div><div class="sb-track"><div class="sb-fill" style="width:${Math.round((pts/max)*100)}%;background:${catCol[cat]}"></div></div><div class="sb-val">${pts}/${max}</div></div>`;
+  });
+  document.getElementById('r-bars').innerHTML=bars;
   const ci=s=>s==='pass'?'ci-pass':s==='caution'?'ci-caut':s==='flag'?'ci-flag':'ci-unk';
   const pc=s=>s==='pass'?'pts-p':s==='caution'?'pts-w':s==='flag'?'pts-f':'pts-u';
+  const bycat={};cats.forEach(c=>{bycat[c]=[];});
+  chks.forEach(c=>{(bycat[c.category]||(bycat['Site & Zoning'])).push(c);});
   const fw=document.getElementById('findings');fw.innerHTML='';
   cats.forEach(cat=>{
     const items=bycat[cat];if(!items.length)return;
     const cp=items.reduce((s,i)=>s+(i.pts||0),0),cm=items.reduce((s,i)=>s+(i.max||0),0);
-    let h=`<div class="sec"><div class="sechd"><span>${cat}</span>${cm>0?`<span class="spts">${cp} / ${cm} pts</span>`:''}</div>`;
-    items.forEach(it=>{
-      h+=`<div class="chk"><div class="ci ${ci(it.status)}"></div><div class="cbody"><div class="cname">${it.name}<span class="cbadge">AI</span></div><div class="cfind">${it.finding||'—'}</div>${it.url?`<a class="clink" href="${it.url}" target="_blank">↗ ${it.url_label}</a>`:''}</div><div class="cpts ${it.max>0?pc(it.status):'pts-i'}">${it.max>0?it.pts+' / '+it.max:'—'}</div></div>`;
+    let h=`<div class="sec"><div class="sechd"><span>${cat}</span>${cm>0?`<span class="spts">${cp}/${cm} pts</span>`:''}</div>`;
+    items.forEach((it,idx)=>{
+      const did=`det-${cat.replace(/\s/g,'')}-${idx}`;
+      h+=`<div class="chk"><div class="chk-top"><div class="ci ${ci(it.status)}"></div><div class="cname">${it.name}</div><div class="cpts-wrap"><div class="cpts ${it.max>0?pc(it.status):'pts-u'}">${it.max>0?it.pts+'/'+it.max:'—'}</div>${it.url?`<a class="clink" href="${it.url}" target="_blank">↗ ${it.url_label}</a>`:''}</div></div><div class="cfind">${it.finding||'—'}</div>${it.detail?`<button class="toggle-detail" onclick="togDet('${did}')">▸ Detailed analysis</button><div class="cdetail hidden" id="${did}">${it.detail}</div>`:''}</div>`;
     });
     h+='</div>';fw.innerHTML+=h;
   });
 }
 
-function submitFU(){
-  const n=document.getElementById('fu-n').value.trim(),e=document.getElementById('fu-e').value.trim();
-  if(!n||!e){alert('Please enter a name and email.');return;}
-  document.getElementById('rv').classList.add('hidden');
-  document.getElementById('dv').classList.remove('hidden');
+function togDet(id){const el=document.getElementById(id),btn=el.previousElementSibling;if(el.classList.contains('hidden')){el.classList.remove('hidden');btn.textContent='▾ Detailed analysis';}else{el.classList.add('hidden');btn.textContent='▸ Detailed analysis';}}
+function submitFU(){const n=document.getElementById('fu-n').value.trim(),e=document.getElementById('fu-e').value.trim();if(!n||!e){alert('Please enter a name and email.');return;}document.getElementById('rv').classList.add('hidden');document.getElementById('dv').classList.remove('hidden');}
+function resetForm(){['lv','rv','dv'].forEach(id=>document.getElementById(id).classList.add('hidden'));document.getElementById('fv').classList.remove('hidden');document.getElementById('gbtn').disabled=false;document.getElementById('ferr').style.display='none';}
+
+// ══════════════════════════════
+// DASHBOARD LOGIC
+// ══════════════════════════════
+let dashMap, analyses=[], mapMarkers={}, heatCircles=[], showHeat=false, activeFilter='ALL', selectedId=null;
+
+function initMap(){
+  dashMap=L.map('dash-map',{zoomControl:true,attributionControl:false}).setView([37.5,-96],4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(dashMap);
 }
 
-function reset(){
-  ['lv','rv','dv'].forEach(id=>document.getElementById(id).classList.add('hidden'));
-  document.getElementById('fv').classList.remove('hidden');
-  document.getElementById('gbtn').disabled=false;
-  document.getElementById('ferr').style.display='none';
+function loadAnalyses(){try{analyses=JSON.parse(localStorage.getItem('cbre_analyses')||'[]');}catch(e){analyses=[];}}
+
+function updateStats(){
+  loadAnalyses();
+  document.getElementById('st-total').textContent=analyses.length;
+  document.getElementById('st-a').textContent=analyses.filter(a=>a.grade==='A').length;
+  document.getElementById('st-b').textContent=analyses.filter(a=>a.grade==='B').length;
+  document.getElementById('st-flags').textContent=analyses.reduce((s,a)=>s+(a.checks||[]).filter(c=>c.status==='flag').length,0);
 }
+
+function setFilter(grade,btn){activeFilter=grade;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderList();renderMap();}
+
+function getFiltered(){
+  const q=document.getElementById('search-in').value.toLowerCase();
+  return analyses.filter(a=>{
+    const matchG=activeFilter==='ALL'||activeFilter==='D'?(activeFilter==='D'?a.grade==='D'||a.grade==='F':true):a.grade===activeFilter;
+    const matchQ=!q||(a.geocoded_address||'').toLowerCase().includes(q)||(a.city||'').toLowerCase().includes(q)||(a.state||'').toLowerCase().includes(q);
+    return matchG&&matchQ;
+  });
+}
+
+function renderList(){
+  loadAnalyses();
+  const list=document.getElementById('sb-list'),items=getFiltered();
+  if(!items.length){
+    list.innerHTML=analyses.length===0
+      ?`<div class="empty-state"><h3>No properties yet</h3><p>Run an analysis in the Screener tab to start tracking properties on the map.</p><button class="btn-to-screener" onclick="showPage('screener',document.querySelectorAll('.nav-tab')[0])">Go to Screener →</button></div>`
+      :`<div class="empty-state"><h3>No matches</h3><p>Try a different filter or search term.</p></div>`;
+    return;
+  }
+  list.innerHTML=items.map(a=>{
+    const gc=gradeColor(a.grade||'F'),sel=a.id===selectedId;
+    return `<div class="prop-card${sel?' selected':''}" onclick="selectProp('${a.id}')">
+      <div class="pc-top"><div class="pc-addr">${a.geocoded_address||a.city+', '+a.state}</div><div class="pc-grade" style="color:${gc}">${a.grade||'F'}</div></div>
+      <div class="pc-meta">${a.city||''},${a.state||''} · ${a.score||0}/100 · ${new Date(a.analyzedAt||Date.now()).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+      <div class="pc-bar"><div class="pc-fill" style="width:${a.score||0}%;background:${gc}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderMap(){
+  if(!dashMap)return;
+  Object.values(mapMarkers).forEach(m=>dashMap.removeLayer(m));mapMarkers={};
+  heatCircles.forEach(c=>dashMap.removeLayer(c));heatCircles=[];
+  getFiltered().forEach(a=>{
+    const lat=a.coordinates?.lat,lng=a.coordinates?.lng;
+    if(!lat||!lng||isNaN(lat)||isNaN(lng))return;
+    const gc=gradeColor(a.grade||'F');
+    const icon=L.divIcon({className:'',html:`<div style="width:28px;height:28px;border-radius:50%;background:${gc};border:2px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:13px;color:${a.grade==='A'||a.grade==='B'?'#003F2D':'white'};font-weight:400;box-shadow:0 2px 8px rgba(0,0,0,.4),0 0 12px ${gc}40;cursor:pointer">${a.grade||'F'}</div>`,iconSize:[28,28],iconAnchor:[14,14]});
+    const m=L.marker([lat,lng],{icon}).addTo(dashMap);
+    m.on('click',()=>selectProp(a.id));
+    mapMarkers[a.id]=m;
+    if(showHeat){
+      const hc=L.circle([lat,lng],{radius:35000,color:'transparent',fillColor:gc,fillOpacity:.18}).addTo(dashMap);
+      heatCircles.push(hc);
+    }
+  });
+}
+
+function selectProp(id){
+  selectedId=id;renderList();
+  const a=analyses.find(x=>x.id===id);if(!a)return;
+  if(a.coordinates?.lat&&a.coordinates?.lng)dashMap.setView([a.coordinates.lat,a.coordinates.lng],10,{animate:true});
+  showDetail(a);
+}
+
+function showDetail(a){
+  const gc=gradeColor(a.grade||'F');
+  document.getElementById('dp-addr').textContent=a.geocoded_address||a.city+', '+a.state;
+  document.getElementById('dp-info').textContent=[a.county,a.state,a.submittedBy?'by '+a.submittedBy:null,new Date(a.analyzedAt||Date.now()).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})].filter(Boolean).join(' · ');
+  document.getElementById('dp-grade').textContent=a.grade||'F';document.getElementById('dp-grade').style.color=gc;
+  document.getElementById('dp-score').textContent=(a.score||0)+'/100';
+  document.getElementById('dp-exec').textContent=a.executive_summary||a.summary||'—';
+  const chip=document.getElementById('dp-chip');
+  if(a.score>=70){chip.className='dp-chip pass';chip.textContent='LIKELY QUALIFIED';}
+  else if(a.score>=40){chip.className='dp-chip rev';chip.textContent='NEEDS REVIEW';}
+  else{chip.className='dp-chip fail';chip.textContent='DOES NOT QUALIFY';}
+  const ciC=s=>s==='pass'?'#00C875':s==='caution'?'#FFB020':s==='flag'?'#FF4D3D':'#8A9E97';
+  document.getElementById('dp-checks').innerHTML=(a.checks||[]).map(c=>`<div class="dp-chk"><div class="dp-dot" style="background:${ciC(c.status)}"></div><div class="dp-chk-name">${c.name}</div><div class="dp-chk-pts">${c.max>0?c.pts+'/'+c.max:'—'}</div></div>`).join('');
+  document.getElementById('dp-del').onclick=()=>deleteProp(a.id);
+  document.getElementById('detail-drawer').classList.add('open');
+}
+
+function closeDetail(){document.getElementById('detail-drawer').classList.remove('open');selectedId=null;renderList();}
+
+function deleteProp(id){
+  if(!confirm('Delete this property?'))return;
+  analyses=analyses.filter(a=>a.id!==id);
+  localStorage.setItem('cbre_analyses',JSON.stringify(analyses));
+  closeDetail();updateStats();renderList();renderMap();
+}
+
+function toggleHeat(heat,btn){
+  showHeat=heat;
+  document.getElementById('btn-markers').classList.toggle('on',!heat);
+  document.getElementById('btn-heat').classList.toggle('on',heat);
+  renderMap();
+}
+
+function exportCSV(){
+  if(!analyses.length){alert('No properties to export.');return;}
+  const h=['ID','Address','City','State','County','ZIP','Grade','Score','Verdict','Submitted By','Analyzed At','Acreage','Lat','Lng'];
+  const rows=analyses.map(a=>[a.id,`"${(a.geocoded_address||'').replace(/"/g,'""')}"`,a.city||'',a.state||'',a.county||'',a.address_input?.zip||'',a.grade||'',a.score||0,`"${(a.verdict||'').replace(/"/g,'""')}"`,`"${(a.submittedBy||'').replace(/"/g,'""')}"`,a.analyzedAt||'',a.address_input?.acres||'',a.coordinates?.lat||'',a.coordinates?.lng||''].join(','));
+  const csv=[h.join(','),...rows].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');link.href=url;link.download='cbre-dc-properties.csv';link.click();URL.revokeObjectURL(url);
+}
+
+function clearAll(){if(!confirm('Delete ALL tracked properties? This cannot be undone.'))return;localStorage.removeItem('cbre_analyses');analyses=[];closeDetail();updateStats();renderList();renderMap();}
 </script>
 </body>
 </html>
