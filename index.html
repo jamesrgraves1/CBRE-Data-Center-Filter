@@ -30,10 +30,8 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 .ntag{font-family:var(--mono);font-size:9px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;}
 
 /* PAGES */
-.page{display:none;padding-top:52px;}
-.page.active{display:block;}
+.page{padding-top:52px;display:none;}
 #page-dash{padding-top:52px;}
-#page-dash.active{display:flex;flex-direction:column;height:100vh;}
 
 /* ══════════════ SCREENER ══════════════ */
 .hero{padding:2.5rem 1.5rem 2rem;max-width:960px;margin:0 auto;}
@@ -512,20 +510,35 @@ tr.sel-row td{background:rgba(0,255,156,.04);}
 let dashReady = false;
 
 function goPage(name) {
-  document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  const pg = document.getElementById('page-' + name);
-  pg.style.display = name === 'dashboard' ? 'flex' : 'block';
-  pg.style.flexDirection = name === 'dashboard' ? 'column' : '';
-  pg.style.height = name === 'dashboard' ? '100vh' : '';
-  pg.classList.add('active');
-  document.getElementById('tab-' + name[0]).classList.add('active');
+  // hide all pages
+  ['screener','dash'].forEach(function(n) {
+    var p = document.getElementById('page-' + n);
+    if (p) p.style.display = 'none';
+  });
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  // show target page
+  var pg = document.getElementById('page-' + name);
+  if (!pg) return;
+  if (name === 'dashboard') {
+    pg.style.cssText = 'display:flex;flex-direction:column;height:100vh;padding-top:52px;';
+  } else {
+    pg.style.cssText = 'display:block;padding-top:52px;';
+  }
+  var tabEl = document.getElementById('tab-' + name[0]);
+  if (tabEl) tabEl.classList.add('active');
   if (name === 'dashboard') initDash();
 }
 
-// init screener page
-document.getElementById('page-screener').style.display = 'block';
-document.getElementById('page-dash').style.display = 'none';
+// init — show screener on load
+function bootPages() {
+  var s = document.getElementById('page-screener');
+  var d = document.getElementById('page-dash');
+  if (s) { s.style.display = 'block'; }
+  if (d) { d.style.display = 'none'; }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootPages);
+} else { bootPages(); }
 
 // ═══════════════════════════════
 // SCREENER
